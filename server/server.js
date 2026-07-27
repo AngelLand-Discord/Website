@@ -16,43 +16,6 @@ app.use(express.static(path.join(__dirname, "../client")));
 
 /*
 |--------------------------------------------------------------------------
-| Sample Restaurant Data
-| Replace this with PostgreSQL data later.
-|--------------------------------------------------------------------------
-*/
-
-let restaurants = [
-    {
-        id: 1,
-        name: "Pizza Palace",
-        latitude: 12.9716,
-        longitude: 80.2200,
-        availableSeats: 15,
-        rating: 4.5,
-        image: "https://picsum.photos/400/250?random=1"
-    },
-    {
-        id: 2,
-        name: "Burger Hub",
-        latitude: 12.9735,
-        longitude: 80.2250,
-        availableSeats: 8,
-        rating: 4.2,
-        image: "https://picsum.photos/400/250?random=2"
-    },
-    {
-        id: 3,
-        name: "Indian Spice",
-        latitude: 12.9698,
-        longitude: 80.2280,
-        availableSeats: 0,
-        rating: 4.8,
-        image: "https://picsum.photos/400/250?random=3"
-    }
-];
-
-/*
-|--------------------------------------------------------------------------
 | Calculate Distance (Haversine Formula)
 |--------------------------------------------------------------------------
 */
@@ -81,30 +44,56 @@ function getDistance(lat1, lon1, lat2, lon2) {
 |--------------------------------------------------------------------------
 */
 
-app.get("/restaurants", (req, res) => {
+app.get("/restaurants", async (req, res) => {
 
-    const userLat = Number(req.query.lat);
-    const userLon = Number(req.query.lon);
+    try {
 
-    const nearbyRestaurants = restaurants
-        .map((restaurant) => {
+        const userLat = Number(req.query.lat);
+        const userLon = Number(req.query.lon);
 
-            const distance = getDistance(
-                userLat,
-                userLon,
-                restaurant.latitude,
-                restaurant.longitude
-            );
+        const result = await pool.query(
+            "SELECT * FROM restaurants"
+        );
 
-            return {
-                ...restaurant,
-                distance: distance.toFixed(2)
-            };
+        const restaurants = result.rows;
 
-        })
-        .sort((a, b) => a.distance - b.distance);
+        const nearbyRestaurants = restaurants
+            .map((restaurant) => {
 
-    res.json(nearbyRestaurants);
+                const distance = getDistance(
+                    userLat,
+                    userLon,
+                    restaurant.latitude,
+                    restaurant.longitude
+                );
+
+                return {
+                    id: restaurant.id,
+                    name: restaurant.name,
+                    latitude: restaurant.latitude,
+                    longitude: restaurant.longitude,
+                    availableSeats: restaurant.available_seats,
+                    rating: restaurant.rating,
+                    image: restaurant.image,
+                    distance: distance.toFixed(2)
+                };
+
+            })
+            .sort((a, b) => a.distance - b.distance);
+
+        res.json(nearbyRestaurants);
+
+    }
+
+    catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            message: "Database Error"
+        });
+
+    }
 
 });
 
@@ -114,61 +103,98 @@ app.get("/restaurants", (req, res) => {
 |--------------------------------------------------------------------------
 */
 
-app.post("/book", (req, res) => {
+app.post("/book", async (req, res) => {
 
-    const {
+    try {
 
-        restaurantId,
-        customerName,
-        phone,
-        people,
-        date,
-        time
+        const {
+            restaurantId,
+            customerName,
+            phone,
+            people,
+            date,
+            time
+        } = req.body;
 
-    } = req.body;
+        const restaurantResult = await pool.query(
 
-    const restaurant = restaurants.find(
-        r => r.id === restaurantId
-    );
+            "SELECT * FROM restaurants WHERE id=$1",
 
-    if (!restaurant) {
+            [restaurantId]
 
-        return res.status(404).json({
-            message: "Restaurant not found."
+        );
+
+        if (restaurantResult.rows.length === 0) {
+
+            return res.status(404).json({
+                message: "Restaurant not found."
+            });
+
+        }
+
+        const restaurant = restaurantResult.rows[0];
+
+        if (restaurant.available_seats < people) {
+
+            return res.status(400).json({
+                message: "Not enough seats available."
+            });
+
+        }
+
+        await pool.query(
+
+            `INSERT INTO bookings
+            (restaurant_id, customer_name, phone, people, booking_date, booking_time)
+            VALUES ($1,$2,$3,$4,$5,$6)`,
+
+            [
+                restaurantId,
+                customerName,
+                phone,
+                people,
+                date,
+                time
+            ]
+
+        );
+
+        await pool.query(
+
+            `UPDATE restaurants
+            SET available_seats = available_seats - $1
+            WHERE id=$2`,
+
+            [
+                people,
+                restaurantId
+            ]
+
+        );
+
+        res.json({
+
+            success: true,
+
+            message: "Booking Successful!"
+
         });
 
     }
 
-    if (restaurant.availableSeats < people) {
+    catch (err) {
 
-        return res.status(400).json({
-            message: "Not enough seats available."
+        console.error(err);
+
+        res.status(500).json({
+
+            message: "Database Error"
+
         });
 
     }
-
-    restaurant.availableSeats -= people;
-
-    console.log({
-
-        customerName,
-        phone,
-        restaurant: restaurant.name,
-        people,
-        date,
-        time
-
-    });
-
-    res.json({
-
-        success: true,
-        message: "Booking Successful!"
-
-    });
 
 });
-
 /*
 |--------------------------------------------------------------------------
 | Default Route
