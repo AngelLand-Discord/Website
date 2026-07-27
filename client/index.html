@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Seat Finder</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+</head>
+
+<body>
+
+    <header>
+        <h1>
+            <i class="fa-solid fa-utensils"></i>
+            Restaurant Seat Finder
+        </h1>
+
+        <p>
+            Find nearby restaurants and reserve your seat instantly.
+        </p>
+
+        <button id="locationBtn">
+            <i class="fa-solid fa-location-crosshairs"></i>
+            Use My Location
+        </button>
+    </header>
+
+    <main>
+
+        <section id="loading" class="hidden">
+            <h3>Finding nearby restaurants...</h3>
+        </section>
+
+        <section id="restaurantList">
+
+            <!-- Restaurants will appear here -->
+
+        </section>
+
+    </main>
+
+    <!-- Booking Modal -->
+
+    <div id="bookingModal" class="modal hidden">
+
+        <div class="modal-content">
+
+            <span id="closeModal">&times;</span>
+
+            <h2>Book Your Table</h2>
+
+            <form id="bookingForm">
+
+                <input
+                    type="text"
+                    id="customerName"
+                    placeholder="Your Name"
+                    required>
+
+                <input
+                    type="tel"
+                    id="phone"
+                    placeholder="Phone Number"
+                    required>
+
+                <input
+                    type="number"
+                    id="people"
+                    placeholder="Number of People"
+                    min="1"
+                    required>
+
+                <input
+                    type="date"
+                    id="date"
+                    required>
+
+                <input
+                    type="time"
+                    id="time"
+                    required>
+
+                <button type="submit">
+                    Confirm Booking
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
